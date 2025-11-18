@@ -1,4 +1,4 @@
-# Systemly
+# Sysly
 
 A modern system management platform for tracking internal systems and user assignments.
 
@@ -32,7 +32,7 @@ A modern system management platform for tracking internal systems and user assig
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd Systemly
+cd Sysly
 ```
 
 2. Install dependencies:
@@ -166,7 +166,7 @@ The application will be available at [http://localhost:3000](http://localhost:30
 ## Project Structure
 
 ```
-Systemly/
+Sysly/
 ├── app/
 │   ├── api/              # API routes
 │   ├── dashboard/        # Dashboard page

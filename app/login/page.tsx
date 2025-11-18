@@ -47,7 +47,7 @@ export default function LoginPage() {
                 <span className="text-2xl font-bold text-white">S</span>
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Systemly
+                Sysly
               </h1>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">

@@ -4,8 +4,8 @@ import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Systemly',
-    default: 'Systemly - System Management Platform',
+    template: '%s | Sysly',
+    default: 'Sysly - System Management Platform',
   },
   description: 'Manage your internal systems and user assignments',
 };

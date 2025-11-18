@@ -1,4 +1,4 @@
-# Getting Started with Systemly
+# Getting Started with Sysly
 
 ## Quick Start
 
@@ -66,7 +66,7 @@ The database has been seeded with:
 ## Application Structure
 
 ```
-Systemly/
+Sysly/
 ├── Dashboard         → http://localhost:3000/dashboard
 ├── User Directory    → http://localhost:3000/users
 ├── System Detail     → http://localhost:3000/systems/[id]
@@ -160,4 +160,4 @@ npm start
 4. Experiment with the user assignment interface
 5. Check the README.md for more detailed information
 
-Enjoy using Systemly!
+Enjoy using Sysly!
