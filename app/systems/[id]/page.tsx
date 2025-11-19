@@ -12,6 +12,14 @@ type User = {
   email: string;
 };
 
+type SystemField = {
+  id: string;
+  name: string;
+  fieldType: string;
+  options: string | null;
+  required: boolean;
+};
+
 type System = {
   id: string;
   name: string;
@@ -38,6 +46,12 @@ export default function SystemDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [editingTagsFor, setEditingTagsFor] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
+  const [customFields, setCustomFields] = useState<SystemField[]>([]);
+  const [showAddField, setShowAddField] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState('text');
+  const [newFieldOptions, setNewFieldOptions] = useState('');
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
 
   const isAdmin = session?.user?.role === 'ADMIN';
   const isOwner = system?.owner.id === session?.user?.id;
@@ -46,6 +60,7 @@ export default function SystemDetailPage() {
   useEffect(() => {
     fetchSystem();
     fetchUsers();
+    fetchCustomFields();
   }, [systemId]);
 
   const fetchSystem = async () => {
@@ -71,6 +86,70 @@ export default function SystemDetailPage() {
       setAllUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchCustomFields = async () => {
+    try {
+      const response = await fetch(`/api/systems/${systemId}/fields`);
+      if (response.ok) {
+        const data = await response.json();
+        setCustomFields(data);
+      }
+    } catch (error) {
+      console.error('Error fetching custom fields:', error);
+    }
+  };
+
+  const handleAddField = async () => {
+    if (!newFieldName.trim()) return;
+
+    try {
+      const options = newFieldType === 'select' && newFieldOptions.trim()
+        ? newFieldOptions.split('\n').map(opt => opt.trim()).filter(opt => opt)
+        : null;
+
+      const response = await fetch(`/api/systems/${systemId}/fields`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newFieldName.trim(),
+          fieldType: newFieldType,
+          options: options,
+          required: newFieldRequired,
+        }),
+      });
+
+      if (response.ok) {
+        fetchCustomFields();
+        setShowAddField(false);
+        setNewFieldName('');
+        setNewFieldType('text');
+        setNewFieldOptions('');
+        setNewFieldRequired(false);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to create field');
+      }
+    } catch (error) {
+      console.error('Error creating field:', error);
+      alert('Failed to create field');
+    }
+  };
+
+  const handleDeleteField = async (fieldId: string) => {
+    if (!confirm('Are you sure you want to delete this field? This will not affect existing user data.')) return;
+
+    try {
+      const response = await fetch(`/api/systems/${systemId}/fields/${fieldId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        fetchCustomFields();
+      }
+    } catch (error) {
+      console.error('Error deleting field:', error);
     }
   };
 
@@ -263,6 +342,150 @@ export default function SystemDetailPage() {
               </div>
             )}
 
+            {canEdit && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Custom Fields ({customFields.length})
+                  </h2>
+                  <button
+                    onClick={() => setShowAddField(!showAddField)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-medium transition"
+                  >
+                    + Add Field
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-3">
+                  Define custom fields that can be assigned to users in this system (e.g., role, license, server access).
+                </p>
+
+                {showAddField && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Field Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newFieldName}
+                          onChange={(e) => setNewFieldName(e.target.value)}
+                          placeholder="e.g., role, license, server"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Field Type
+                        </label>
+                        <select
+                          value={newFieldType}
+                          onChange={(e) => setNewFieldType(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                        >
+                          <option value="text">Text (free input)</option>
+                          <option value="select">Select (predefined options)</option>
+                        </select>
+                      </div>
+
+                      {newFieldType === 'select' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Predefined Options (one per line)
+                          </label>
+                          <textarea
+                            value={newFieldOptions}
+                            onChange={(e) => setNewFieldOptions(e.target.value)}
+                            placeholder="admin&#10;user&#10;viewer"
+                            rows={4}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono text-sm"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="required"
+                          checked={newFieldRequired}
+                          onChange={(e) => setNewFieldRequired(e.target.checked)}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="required" className="ml-2 block text-sm text-gray-700">
+                          Required field
+                        </label>
+                      </div>
+
+                      <div className="flex space-x-2 pt-2">
+                        <button
+                          onClick={handleAddField}
+                          disabled={!newFieldName.trim()}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Add Field
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddField(false);
+                            setNewFieldName('');
+                            setNewFieldType('text');
+                            setNewFieldOptions('');
+                            setNewFieldRequired(false);
+                          }}
+                          className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {customFields.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No custom fields defined yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {customFields.map((field) => {
+                      const options = field.options ? JSON.parse(field.options) : null;
+                      return (
+                        <div
+                          key={field.id}
+                          className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-start justify-between"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{field.name}</span>
+                              <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">
+                                {field.fieldType}
+                              </span>
+                              {field.required && (
+                                <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                                  required
+                                </span>
+                              )}
+                            </div>
+                            {options && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                Options: {options.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDeleteField(field.id)}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium ml-3"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -335,37 +558,104 @@ export default function SystemDetailPage() {
 
                             {/* Custom Fields Section */}
                             {editingTagsFor === assignment.user.id ? (
-                              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <label className="block text-xs font-medium text-gray-700 mb-2">
-                                  Custom Fields (key:value format)
+                              <div className="mt-3 p-3 bg-white rounded-lg border border-gray-300">
+                                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                                  Custom Fields
                                 </label>
-                                <textarea
-                                  value={tagInput}
-                                  onChange={(e) => setTagInput(e.target.value)}
-                                  placeholder="role:admin&#10;server:se-prod&#10;environment:production&#10;access:read-write"
-                                  rows={4}
-                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none mb-2 font-mono"
-                                />
-                                <p className="text-xs text-gray-500 mb-3">
-                                  Enter one field per line in format: <code className="bg-gray-200 px-1 rounded">key:value</code>
-                                </p>
-                                <div className="flex space-x-2">
-                                  <button
-                                    onClick={() => handleUpdateTags(assignment.user.id)}
-                                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm"
-                                  >
-                                    Save Fields
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setEditingTagsFor(null);
-                                      setTagInput('');
-                                    }}
-                                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
+                                {customFields.length > 0 ? (
+                                  <div className="space-y-3">
+                                    {customFields.map((field) => {
+                                      const fieldOptions = field.options ? JSON.parse(field.options) : null;
+                                      const currentTags = tagInput.split('\n').reduce((acc, line) => {
+                                        const [key, ...valueParts] = line.split(':');
+                                        if (key && key.trim()) {
+                                          acc[key.trim()] = valueParts.join(':').trim();
+                                        }
+                                        return acc;
+                                      }, {} as Record<string, string>);
+                                      const currentValue = currentTags[field.name] || '';
+
+                                      return (
+                                        <div key={field.id}>
+                                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            {field.name}
+                                            {field.required && <span className="text-red-600 ml-1">*</span>}
+                                          </label>
+                                          {fieldOptions ? (
+                                            <select
+                                              value={currentValue}
+                                              onChange={(e) => {
+                                                const newTags = { ...currentTags, [field.name]: e.target.value };
+                                                setTagInput(
+                                                  Object.entries(newTags)
+                                                    .filter(([_, v]) => v)
+                                                    .map(([k, v]) => `${k}:${v}`)
+                                                    .join('\n')
+                                                );
+                                              }}
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                            >
+                                              <option value="">Select {field.name}...</option>
+                                              {fieldOptions.map((option: string) => (
+                                                <option key={option} value={option}>
+                                                  {option}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          ) : (
+                                            <input
+                                              type="text"
+                                              value={currentValue}
+                                              onChange={(e) => {
+                                                const newTags = { ...currentTags, [field.name]: e.target.value };
+                                                setTagInput(
+                                                  Object.entries(newTags)
+                                                    .filter(([_, v]) => v)
+                                                    .map(([k, v]) => `${k}:${v}`)
+                                                    .join('\n')
+                                                );
+                                              }}
+                                              placeholder={`Enter ${field.name}`}
+                                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                            />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                    <div className="flex space-x-2 pt-2">
+                                      <button
+                                        onClick={() => handleUpdateTags(assignment.user.id)}
+                                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm"
+                                      >
+                                        Save Fields
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingTagsFor(null);
+                                          setTagInput('');
+                                        }}
+                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <p className="text-sm text-gray-500 mb-3">
+                                      No custom fields defined. Add fields in the Custom Fields section above.
+                                    </p>
+                                    <button
+                                      onClick={() => {
+                                        setEditingTagsFor(null);
+                                        setTagInput('');
+                                      }}
+                                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <div className="mt-3">

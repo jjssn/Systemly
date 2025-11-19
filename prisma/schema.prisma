@@ -43,8 +43,25 @@ model System {
 
   owner       User     @relation("SystemOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   assignedUsers SystemUser[]
+  customFields SystemField[]
 
   @@index([ownerId])
+}
+
+model SystemField {
+  id          String   @id @default(cuid())
+  systemId    String
+  name        String   // Field name (e.g., "license", "role")
+  fieldType   String   @default("text") // Type of field: text, select
+  options     String?  // JSON array of predefined options for select fields
+  required    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  system      System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+
+  @@unique([systemId, name])
+  @@index([systemId])
 }
 
 model SystemUser {
