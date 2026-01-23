@@ -1,5 +1,6 @@
-export { default } from 'next-auth/middleware';
+// Middleware disabled - using mock authentication via AuthContext
+// No authentication middleware needed for this demo app
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/systems/:path*', '/users/:path*'],
+  matcher: [],
 };
